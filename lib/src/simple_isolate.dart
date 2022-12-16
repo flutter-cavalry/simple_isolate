@@ -6,6 +6,8 @@ class SISendPort {
   /// [SISendPort] usually embeds message boy into another message identified with [headType].
   /// See [_MsgHead] enum for details.
   final int _headType;
+
+  /// Gets the internal [SendPort].
   final SendPort core;
 
   /// Sends a message with the given [name] and [params].
@@ -76,8 +78,12 @@ enum _MsgHeadInIsolate {
 
 /// Wrapper type around Dart [Isolate].
 class SimpleIsolate<R> {
+  /// Gets the internal [Isolate].
   final Isolate core;
+
+  /// Gets the `Future<R>` of entrypoint function.
   final Future<R> future;
+
   final int _sendPortMsgHead;
   final Future<SendPort> _sendPortFuture;
   SISendPort? _sendPort;
