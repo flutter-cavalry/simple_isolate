@@ -103,7 +103,7 @@ class SimpleIsolate<R> {
   }
 
   /// Spawns an isolate with the given [entrypoint] function and [argument].
-  static Future<SimpleIsolate> spawn<T, R>(
+  static Future<SimpleIsolate<R>> spawn<T, R>(
       Future<R> Function(SIContext<T> ctx) entryPoint, T argument,
       {void Function(SIMsg msg)? onMsgReceived}) async {
     var rp = ReceivePort();
