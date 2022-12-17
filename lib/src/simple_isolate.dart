@@ -125,7 +125,8 @@ class SimpleIsolate<R> {
         case _MsgHead.err:
           {
             rp.close();
-            completer.completeError(rawMsg[1] as Object);
+            completer.completeError(rawMsg[1] as Object,
+                StackTrace.fromString(rawMsg[2] as String));
             break;
           }
 
@@ -187,8 +188,8 @@ class SimpleIsolate<R> {
         sp.send([_MsgHead.load.index, rp.sendPort]);
         var result = await entryPoint(ctx);
         sp.send([_MsgHead.done.index, result]);
-      } catch (err) {
-        sp.send([_MsgHead.err.index, err]);
+      } catch (err, stacktrace) {
+        sp.send([_MsgHead.err.index, err, stacktrace.toString()]);
       } finally {
         rp.close();
       }

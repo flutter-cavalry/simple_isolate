@@ -24,6 +24,23 @@ void main() {
     expect(() => si.future, throwsA(isA<FormatException>()));
   });
 
+  test('Stacktrace', () async {
+    var si = await SimpleIsolate.spawn<int, String>((SIContext<int> ctx) async {
+      var to = ctx.argument;
+      for (var i = 1; i <= to; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      }
+      throw FormatException('haha');
+    }, 3);
+    var stacktrace = '';
+    try {
+      await si.future;
+    } catch (err, st) {
+      stacktrace = st.toString();
+    }
+    expect(stacktrace, contains('simple_isolate_test.dart:33:7'));
+  });
+
   test('Message handler', () async {
     List<String> msgList = [];
     var si = await SimpleIsolate.spawn<int, String>(
