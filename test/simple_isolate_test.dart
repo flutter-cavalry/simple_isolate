@@ -3,8 +3,8 @@ import 'package:test/test.dart';
 
 void main() {
   test('Future and completion', () async {
-    var si = await SimpleIsolate.spawn<int, String>((SIContext<int> ctx) async {
-      var to = ctx.argument;
+    var si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
+      var to = ctx.argument as int;
       for (var i = 1; i <= to; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 500));
       }
@@ -14,8 +14,8 @@ void main() {
   });
 
   test('Exception', () async {
-    var si = await SimpleIsolate.spawn<int, String>((SIContext<int> ctx) async {
-      var to = ctx.argument;
+    var si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
+      var to = ctx.argument as int;
       for (var i = 1; i <= to; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 500));
       }
@@ -25,8 +25,8 @@ void main() {
   });
 
   test('Stacktrace', () async {
-    var si = await SimpleIsolate.spawn<int, String>((SIContext<int> ctx) async {
-      var to = ctx.argument;
+    var si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
+      var to = ctx.argument as int;
       for (var i = 1; i <= to; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 500));
       }
@@ -43,9 +43,9 @@ void main() {
 
   test('Message handler', () async {
     List<String> msgList = [];
-    var si = await SimpleIsolate.spawn<int, String>(
-      (SIContext<int> ctx) async {
-        var to = ctx.argument;
+    var si = await SimpleIsolate.spawn<String>(
+      (SIContext ctx) async {
+        var to = ctx.argument as int;
         ctx.sendMsg('greeting', <String, dynamic>{'msg': 'hello'});
         for (var i = 1; i <= to; i++) {
           await Future<void>.delayed(const Duration(milliseconds: 500));
@@ -69,8 +69,8 @@ void main() {
 
   test('Bidirectional Message handlers', () async {
     List<String> msgList = [];
-    var si = await SimpleIsolate.spawn<int, String>(
-      (SIContext<int> ctx) async {
+    var si = await SimpleIsolate.spawn<String>(
+      (SIContext ctx) async {
         var res = '';
         ctx.onMsgReceivedInIsolate = (msg) {
           res += msg.toString();

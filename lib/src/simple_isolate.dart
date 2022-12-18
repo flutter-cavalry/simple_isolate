@@ -42,9 +42,9 @@ class SIMsg {
 }
 
 /// Context type used as the only parameter type of entrypoint function.
-class SIContext<T> {
+class SIContext {
   /// The argument passed in [SimpleIsolate.spawn].
-  final T argument;
+  final dynamic argument;
 
   /// Gets the [SISendPoint] used to send messages from the isolate.
   final SISendPort sendPort;
@@ -103,11 +103,11 @@ class SimpleIsolate<R> {
   }
 
   /// Spawns an isolate with the given [entrypoint] function and [argument].
-  static Future<SimpleIsolate<R>> spawn<T, R>(
-      Future<R> Function(SIContext<T> ctx) entryPoint, T argument,
+  static Future<SimpleIsolate<T>> spawn<T>(
+      Future<T> Function(SIContext ctx) entryPoint, dynamic argument,
       {void Function(SIMsg msg)? onMsgReceived}) async {
     var rp = ReceivePort();
-    var completer = Completer<R>();
+    var completer = Completer<T>();
     SendPort? sp;
     var spCompleter = Completer<SendPort>();
 
@@ -118,7 +118,7 @@ class SimpleIsolate<R> {
         case _MsgHead.done:
           {
             rp.close();
-            completer.complete(rawMsg[1] as R);
+            completer.complete(rawMsg[1] as T);
             break;
           }
 
@@ -156,15 +156,16 @@ class SimpleIsolate<R> {
     ];
 
     var iso = await Isolate.spawn(_makeEntryFunc(entryPoint), entryRawParam);
-    return SimpleIsolate<R>._(iso, completer.future,
+    return SimpleIsolate<T>._(iso, completer.future,
         _MsgHeadInIsolate.userMsg.index, spCompleter.future);
   }
 
-  static void Function(List<dynamic> rawMsg) _makeEntryFunc<T, R>(
-      Future<R> Function(SIContext<T> ctx) entryPoint) {
+  static void Function(List<dynamic> rawMsg) _makeEntryFunc<T>(
+      Future<T> Function(SIContext ctx) entryPoint) {
     return (List<dynamic> rawMsg) async {
       var sp = rawMsg[0] as SendPort;
-      var argument = rawMsg[1] as T;
+      // ignore: implicit_dynamic_variable
+      var argument = rawMsg[1];
       var ctx = SIContext(argument, SISendPort(sp, _MsgHead.userMsg.index));
       var rp = ReceivePort();
       rp.listen((dynamic dynRawMsg) {

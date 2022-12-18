@@ -4,10 +4,11 @@ import 'package:simple_isolate/simple_isolate.dart';
 
 Future<void> futureCompletion() async {
   // Create a [SimpleIsolate] from function of type [Future<String>(int)].
-  var si = await SimpleIsolate.spawn<int, String>(
-    (SIContext<int> ctx) async {
+  var si = await SimpleIsolate.spawn<String>(
+    (SIContext ctx) async {
+      var count = ctx.argument as int;
       var result = '';
-      for (var i = 0; i < ctx.argument; i++) {
+      for (var i = 0; i < count; i++) {
         result += '<data chunk $i>';
         await Future<void>.delayed(Duration(milliseconds: 500));
       }
@@ -23,8 +24,8 @@ Future<void> futureCompletion() async {
 
 Future<void> futureException() async {
   // Create a [SimpleIsolate] from function of type [Future<String>(int)].
-  var si = await SimpleIsolate.spawn<int, String>(
-    (SIContext<int> ctx) async {
+  var si = await SimpleIsolate.spawn<String>(
+    (SIContext ctx) async {
       await Future<void>.delayed(Duration(milliseconds: 500));
       throw Exception('Oops!');
     },
@@ -42,10 +43,11 @@ Future<void> futureException() async {
 
 Future<void> sendMessagesFromIsolate() async {
   // Create a [SimpleIsolate] from function of type [Future<String>(int)].
-  var si = await SimpleIsolate.spawn<int, String>(
-    (SIContext<int> ctx) async {
+  var si = await SimpleIsolate.spawn<String>(
+    (SIContext ctx) async {
       var result = '';
-      for (var i = 0; i < ctx.argument; i++) {
+      var to = ctx.argument as int;
+      for (var i = 0; i < to; i++) {
         result += '<data chunk $i>';
         ctx.sendMsg(
             'got-data', <String, dynamic>{'index': i, 'currentResult': result});
@@ -82,8 +84,8 @@ Future<void> sendMessagesFromIsolate() async {
 
 Future<void> sendMessagesToIsolate() async {
   // Create a [SimpleIsolate] from function of type [Future<String>(int)].
-  var si = await SimpleIsolate.spawn<int, String>(
-    (SIContext<int> ctx) async {
+  var si = await SimpleIsolate.spawn<String>(
+    (SIContext ctx) async {
       var result = '';
       ctx.onMsgReceivedInIsolate = (msg) {
         switch (msg.name) {
@@ -101,7 +103,8 @@ Future<void> sendMessagesToIsolate() async {
             }
         }
       };
-      for (var i = 0; i < ctx.argument; i++) {
+      var to = ctx.argument as int;
+      for (var i = 0; i < to; i++) {
         result += '<data chunk $i>';
         await Future<void>.delayed(Duration(milliseconds: 500));
       }
@@ -115,4 +118,15 @@ Future<void> sendMessagesToIsolate() async {
   /**
    * <data chunk 0><injected!!!><data chunk 1><data chunk 2>
    */
+}
+
+void main(List<String> args) async {
+  await futureCompletion();
+  try {
+    await futureException();
+  } catch (err) {
+    print('Error: $err');
+  }
+  await sendMessagesFromIsolate();
+  await sendMessagesToIsolate();
 }

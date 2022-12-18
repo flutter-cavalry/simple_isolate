@@ -18,12 +18,12 @@ First, install and import this package:
 import 'package:simple_isolate/simple_isolate.dart';
 ```
 
-Instead of `Isolate.spawn`, use `SimpleIsolate.spawn<T, R>(entrypoint, argument)` to run a function of type `Future<R> Function(SIContext<T> ctx)` as the entrypoint function for the `Isolate` to be created.
+Instead of `Isolate.spawn`, use `SimpleIsolate.spawn<T>(entrypoint, argument)` to run a function of type `Future<T> Function(SIContext ctx)` as an isolate entrypoint.
 
-- The context type `SIContext<T>` can be used in many cases, which we will cover in examples below
+- The context type `SIContext` can be used in many cases, which we will cover in examples below
 - `SIContext.argument`: gets the argument passed to the entrypoint function
-- Note the entrypoint function returns a `Future`, so you can return data back to the calling function as long as the data is serializable between isolates
-- `SimpleIsolate.spawn`: wrapper around `Isolate.spawn`, returns a `Future<SimpleIsolate>`.
+- Note the entrypoint function returns a `Future<T>`, you can return data back to the calling function as long as the data is serializable between isolates
+- `SimpleIsolate.spawn`: wrapper around `Isolate.spawn`, returns a `Future<SimpleIsolate<T>>`.
 - `SimpleIsolate.future`: use this to wait for completion or handle exceptions from entrypoint function
 - `SimpleIsolate.core`: returns the internal dart [Isolate]
 
@@ -31,11 +31,12 @@ For example, return some data:
 
 ```dart
 // Create a [SimpleIsolate] from function of type [Future<String>(int)].
-var si = await SimpleIsolate.spawn<int, String>(
-  (SIContext<int> ctx) async {
+var si = await SimpleIsolate.spawn<String>(
+  (SIContext ctx) async {
     var result = '';
     // Use `ctx.argument` to get the argument passed to the entrypoint function.
-    for (var i = 0; i < ctx.argument; i++) {
+    var to = ctx.argument as int;
+    for (var i = 0; i < to; i++) {
       result += '<data chunk $i>';
       await Future<void>.delayed(Duration(milliseconds: 500));
     }
@@ -58,8 +59,8 @@ Since it's a `Future` based API, you can simply wrap the `await` statement in a 
 
 ```dart
 // Create a [SimpleIsolate] from function of type [Future<String>(int)].
-var si = await SimpleIsolate.spawn<int, String>(
-  (SIContext<int> ctx) async {
+var si = await SimpleIsolate.spawn<String>(
+  (SIContext ctx) async {
     await Future<void>.delayed(Duration(milliseconds: 500));
     throw Exception('Oops!');
   },
@@ -92,10 +93,11 @@ To handle the messages sent from an isolate, use the `onMsgReceived` params in `
 ```dart
 Future<void> sendMessagesFromIsolate() async {
   // Create a [SimpleIsolate] from function of type [Future<String>(int)].
-  var si = await SimpleIsolate.spawn<int, String>(
-    (SIContext<int> ctx) async {
+  var si = await SimpleIsolate.spawn<String>(
+    (SIContext ctx) async {
       var result = '';
-      for (var i = 0; i < ctx.argument; i++) {
+      var to = ctx.argument as int;
+      for (var i = 0; i < to; i++) {
         result += '<data chunk $i>';
         ctx.sendMsg(
             'got-data', <String, dynamic>{'index': i, 'currentResult': result});
@@ -140,8 +142,8 @@ To send message back into isolate, use `SimpleIsolate.sendMsgToIsolate`. And han
 ```dart
 Future<void> sendMessagesToIsolate() async {
   // Create a [SimpleIsolate] from function of type [Future<String>(int)].
-  var si = await SimpleIsolate.spawn<int, String>(
-    (SIContext<int> ctx) async {
+  var si = await SimpleIsolate.spawn<String>(
+    (SIContext ctx) async {
       var result = '';
       ctx.onMsgReceivedInIsolate = (msg) {
         switch (msg.name) {
@@ -159,7 +161,8 @@ Future<void> sendMessagesToIsolate() async {
             }
         }
       };
-      for (var i = 0; i < ctx.argument; i++) {
+      var to = ctx.argument as int;
+      for (var i = 0; i < to; i++) {
         result += '<data chunk $i>';
         await Future<void>.delayed(Duration(milliseconds: 500));
       }
