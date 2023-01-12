@@ -91,4 +91,23 @@ void main() {
         '<sending hello>hi -> {from: main process}<sending done>');
     expect(msgList, ['greeting -> {msg: hello}', 'greeting -> {msg: done}']);
   });
+  test('Cancellation', () async {
+    var si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
+      var to = ctx.argument as int;
+      for (var i = 1; i <= to; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      }
+      throw FormatException('haha');
+    }, 4);
+    expect(() async {
+      await Future.wait<String>([
+        si.future,
+        () async {
+          await Future<void>.delayed(Duration(seconds: 1));
+          si.core.kill();
+          return Future.value('');
+        }(),
+      ]);
+    }, throwsA(isA<SimpleIsolateAbortException>()));
+  });
 }

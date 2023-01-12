@@ -3,7 +3,6 @@
 import 'package:simple_isolate/simple_isolate.dart';
 
 Future<void> futureCompletion() async {
-  // Create a [SimpleIsolate] from function of type [Future<String>(int)].
   var si = await SimpleIsolate.spawn<String>(
     (SIContext ctx) async {
       var count = ctx.argument as int;
@@ -23,7 +22,6 @@ Future<void> futureCompletion() async {
 }
 
 Future<void> futureException() async {
-  // Create a [SimpleIsolate] from function of type [Future<String>(int)].
   var si = await SimpleIsolate.spawn<String>(
     (SIContext ctx) async {
       await Future<void>.delayed(Duration(milliseconds: 500));
@@ -42,7 +40,6 @@ Future<void> futureException() async {
 }
 
 Future<void> sendMessagesFromIsolate() async {
-  // Create a [SimpleIsolate] from function of type [Future<String>(int)].
   var si = await SimpleIsolate.spawn<String>(
     (SIContext ctx) async {
       var result = '';
@@ -83,7 +80,6 @@ Future<void> sendMessagesFromIsolate() async {
 }
 
 Future<void> sendMessagesToIsolate() async {
-  // Create a [SimpleIsolate] from function of type [Future<String>(int)].
   var si = await SimpleIsolate.spawn<String>(
     (SIContext ctx) async {
       var result = '';
@@ -120,6 +116,31 @@ Future<void> sendMessagesToIsolate() async {
    */
 }
 
+Future<void> kill() async {
+  var si = await SimpleIsolate.spawn<String>(
+    (SIContext ctx) async {
+      var count = ctx.argument as int;
+      var result = '';
+      for (var i = 0; i < count; i++) {
+        var data = '<data chunk $i>';
+        print('--> Appending data $data');
+        result += data;
+        await Future<void>.delayed(Duration(milliseconds: 500));
+      }
+      return result;
+    },
+    4,
+  );
+  await Future.wait<String>([
+    si.future,
+    () async {
+      await Future<void>.delayed(Duration(seconds: 1));
+      si.core.kill();
+      return Future.value('');
+    }(),
+  ]);
+}
+
 void main(List<String> args) async {
   await futureCompletion();
   try {
@@ -129,4 +150,10 @@ void main(List<String> args) async {
   }
   await sendMessagesFromIsolate();
   await sendMessagesToIsolate();
+
+  try {
+    await cancellation();
+  } on SimpleIsolateAbortException catch (_) {
+    print('Isolation killed');
+  }
 }

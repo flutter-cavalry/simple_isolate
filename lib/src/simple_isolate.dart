@@ -76,6 +76,12 @@ enum _MsgHeadInIsolate {
   userMsg,
 }
 
+/// The exception type indicating an [Isolate] is killed.
+class SimpleIsolateAbortException implements Exception {
+  String cause;
+  SimpleIsolateAbortException(this.cause);
+}
+
 /// Wrapper type around Dart [Isolate].
 class SimpleIsolate<R> {
   /// Gets the internal [Isolate].
@@ -110,43 +116,52 @@ class SimpleIsolate<R> {
     var completer = Completer<T>();
     SendPort? sp;
     var spCompleter = Completer<SendPort>();
+    var isDone = false;
 
     rp.listen((dynamic dynRawMsg) {
-      var rawMsg = dynRawMsg as List<dynamic>;
-      var type = _MsgHead.values[rawMsg[0] as int];
-      switch (type) {
-        case _MsgHead.done:
-          {
-            rp.close();
-            completer.complete(rawMsg[1] as T);
-            break;
-          }
+      if (dynRawMsg == null && !isDone) {
+        // Cancelled.
+        rp.close();
+        completer.completeError(
+            SimpleIsolateAbortException('The [Isolate] is cancelled'));
+      } else {
+        var rawMsg = dynRawMsg as List<dynamic>;
+        var type = _MsgHead.values[rawMsg[0] as int];
+        switch (type) {
+          case _MsgHead.done:
+            {
+              isDone = true;
+              rp.close();
+              completer.complete(rawMsg[1] as T);
+              break;
+            }
 
-        case _MsgHead.err:
-          {
-            rp.close();
-            completer.completeError(rawMsg[1] as Object,
-                StackTrace.fromString(rawMsg[2] as String));
-            break;
-          }
+          case _MsgHead.err:
+            {
+              rp.close();
+              completer.completeError(rawMsg[1] as Object,
+                  StackTrace.fromString(rawMsg[2] as String));
+              break;
+            }
 
-        case _MsgHead.load:
-          {
-            sp = rawMsg[1] as SendPort;
-            spCompleter.complete(sp);
-            break;
-          }
+          case _MsgHead.load:
+            {
+              sp = rawMsg[1] as SendPort;
+              spCompleter.complete(sp);
+              break;
+            }
 
-        case _MsgHead.userMsg:
-          {
-            onMsgReceived?.call(SIMsg.fromRawMsg(rawMsg[1]));
-            break;
-          }
+          case _MsgHead.userMsg:
+            {
+              onMsgReceived?.call(SIMsg.fromRawMsg(rawMsg[1]));
+              break;
+            }
 
-        default:
-          {
-            throw Exception('Unknown _MsgHead value $type');
-          }
+          default:
+            {
+              throw Exception('Unknown _MsgHead value $type');
+            }
+        }
       }
     });
 
@@ -155,7 +170,8 @@ class SimpleIsolate<R> {
       argument,
     ];
 
-    var iso = await Isolate.spawn(_makeEntryFunc(entryPoint), entryRawParam);
+    var iso = await Isolate.spawn(_makeEntryFunc(entryPoint), entryRawParam,
+        onExit: rp.sendPort);
     return SimpleIsolate<T>._(iso, completer.future,
         _MsgHeadInIsolate.userMsg.index, spCompleter.future);
   }
