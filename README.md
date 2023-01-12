@@ -30,7 +30,6 @@ Instead of `Isolate.spawn`, use `SimpleIsolate.spawn<T>(entrypoint, argument)` t
 For example, return some data:
 
 ```dart
-// Create a [SimpleIsolate] from function of type [Future<String>(int)].
 var si = await SimpleIsolate.spawn<String>(
   (SIContext ctx) async {
     var result = '';
@@ -58,7 +57,6 @@ print(await si.future);
 Since it's a `Future` based API, you can simply wrap the `await` statement in a `try-catch` block to handle exceptions:
 
 ```dart
-// Create a [SimpleIsolate] from function of type [Future<String>(int)].
 var si = await SimpleIsolate.spawn<String>(
   (SIContext ctx) async {
     await Future<void>.delayed(Duration(milliseconds: 500));
@@ -92,7 +90,6 @@ To handle the messages sent from an isolate, use the `onMsgReceived` params in `
 
 ```dart
 Future<void> sendMessagesFromIsolate() async {
-  // Create a [SimpleIsolate] from function of type [Future<String>(int)].
   var si = await SimpleIsolate.spawn<String>(
     (SIContext ctx) async {
       var result = '';
@@ -176,5 +173,41 @@ Future<void> sendMessagesToIsolate() async {
   /**
    * <data chunk 0><injected!!!><data chunk 1><data chunk 2>
    */
+}
+```
+
+## Get notified when an isolate is killed
+
+`SimpleIsolate.future` will throw a `SimpleIsolateAbortException` when killed.
+
+```dart
+var si = await SimpleIsolate.spawn<String>(
+  (SIContext ctx) async {
+    var count = ctx.argument as int;
+    var result = '';
+    for (var i = 0; i < count; i++) {
+      var data = '<data chunk $i>';
+      print('--> Appending data $data');
+      result += data;
+      await Future<void>.delayed(Duration(milliseconds: 500));
+    }
+    return result;
+  },
+  4,
+);
+
+try {
+  await Future.wait<String>([
+    // Wait for isolate completion.
+    si.future,
+    // Kill the isolate after 1 second.
+    () async {
+      await Future<void>.delayed(Duration(seconds: 1));
+      si.core.kill();
+      return Future.value('');
+    }(),
+  ]);
+} on SimpleIsolateAbortException catch (_) {
+  print('Isolation killed');
 }
 ```

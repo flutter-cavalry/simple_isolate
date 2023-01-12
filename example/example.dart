@@ -131,14 +131,19 @@ Future<void> kill() async {
     },
     4,
   );
-  await Future.wait<String>([
-    si.future,
-    () async {
-      await Future<void>.delayed(Duration(seconds: 1));
-      si.core.kill();
-      return Future.value('');
-    }(),
-  ]);
+
+  try {
+    await Future.wait<String>([
+      si.future,
+      () async {
+        await Future<void>.delayed(Duration(seconds: 1));
+        si.core.kill();
+        return Future.value('');
+      }(),
+    ]);
+  } on SimpleIsolateAbortException catch (_) {
+    print('Isolation killed');
+  }
 }
 
 void main(List<String> args) async {
@@ -150,10 +155,5 @@ void main(List<String> args) async {
   }
   await sendMessagesFromIsolate();
   await sendMessagesToIsolate();
-
-  try {
-    await cancellation();
-  } on SimpleIsolateAbortException catch (_) {
-    print('Isolation killed');
-  }
+  await kill();
 }

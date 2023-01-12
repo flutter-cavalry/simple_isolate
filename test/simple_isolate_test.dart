@@ -91,7 +91,8 @@ void main() {
         '<sending hello>hi -> {from: main process}<sending done>');
     expect(msgList, ['greeting -> {msg: hello}', 'greeting -> {msg: done}']);
   });
-  test('Cancellation', () async {
+
+  test('Kill', () async {
     var si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
       var to = ctx.argument as int;
       for (var i = 1; i <= to; i++) {
