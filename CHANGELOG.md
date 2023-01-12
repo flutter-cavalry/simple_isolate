@@ -1,3 +1,7 @@
+## 1.3.0
+
+- Throws `SimpleIsolateAbortException` when killed.
+
 ## 1.1.1
 
 - Enforce generic parameter on `SimpleIsolate`.
