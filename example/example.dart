@@ -146,6 +146,26 @@ Future<void> kill() async {
   }
 }
 
+Future<void> onSpawn() async {
+  var si = await SimpleIsolate.spawn<String>(
+    (SIContext ctx) async {
+      var count = ctx.argument as int;
+      var result = '';
+      for (var i = 0; i < count; i++) {
+        result += '<data chunk $i>';
+        await Future<void>.delayed(Duration(milliseconds: 500));
+      }
+      return result;
+    },
+    3,
+    onSpawn: (dynamic argument) => print('onSpawn called with $argument'),
+  );
+  print(await si.future);
+  /**
+   * <data chunk 0><data chunk 1><data chunk 2>
+   */
+}
+
 void main(List<String> args) async {
   await futureCompletion();
   try {
@@ -156,4 +176,5 @@ void main(List<String> args) async {
   await sendMessagesFromIsolate();
   await sendMessagesToIsolate();
   await kill();
+  await onSpawn();
 }

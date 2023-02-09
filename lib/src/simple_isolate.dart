@@ -111,7 +111,8 @@ class SimpleIsolate<R> {
   /// Spawns an isolate with the given [entrypoint] function and [argument].
   static Future<SimpleIsolate<T>> spawn<T>(
       Future<T> Function(SIContext ctx) entryPoint, dynamic argument,
-      {void Function(SIMsg msg)? onMsgReceived}) async {
+      {void Function(SIMsg msg)? onMsgReceived,
+      void Function(dynamic argument)? onSpawn}) async {
     var rp = ReceivePort();
     var completer = Completer<T>();
     SendPort? sp;
@@ -170,19 +171,22 @@ class SimpleIsolate<R> {
       argument,
     ];
 
-    var iso = await Isolate.spawn(_makeEntryFunc(entryPoint), entryRawParam,
+    var iso = await Isolate.spawn(
+        _makeEntryFunc(entryPoint, onSpawn), entryRawParam,
         onExit: rp.sendPort);
     return SimpleIsolate<T>._(iso, completer.future,
         _MsgHeadInIsolate.userMsg.index, spCompleter.future);
   }
 
   static void Function(List<dynamic> rawMsg) _makeEntryFunc<T>(
-      Future<T> Function(SIContext ctx) entryPoint) {
+      Future<T> Function(SIContext ctx) entryPoint,
+      void Function(dynamic argument)? onSpawn) {
     return (List<dynamic> rawMsg) async {
       var sp = rawMsg[0] as SendPort;
       // ignore: implicit_dynamic_variable
       var argument = rawMsg[1];
       var ctx = SIContext(argument, SISendPort(sp, _MsgHead.userMsg.index));
+      onSpawn?.call(ctx.argument);
       var rp = ReceivePort();
       rp.listen((dynamic dynRawMsg) {
         var rawMsg = dynRawMsg as List<dynamic>;
