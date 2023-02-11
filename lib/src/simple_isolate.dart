@@ -108,6 +108,15 @@ class SimpleIsolate<R> {
     _sendPort!.sendMsg(name, params);
   }
 
+  /// Kills the internal [Isolate].
+  void kill({bool? immediate}) {
+    if (immediate == true) {
+      core.kill(priority: Isolate.immediate);
+    } else {
+      core.kill();
+    }
+  }
+
   /// Spawns an isolate with the given [entrypoint] function and [argument].
   static Future<SimpleIsolate<T>> spawn<T>(
       Future<T> Function(SIContext ctx) entryPoint, dynamic argument,

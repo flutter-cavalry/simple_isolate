@@ -1,3 +1,7 @@
+## 1.3.6
+
+- Added a helper function `kill`.
+
 ## 1.3.5
 
 - Added `onSpawn` argument to `spawn` function.
