@@ -1,3 +1,7 @@
+## 1.4.0
+
+- Bidirectional communication is off by default, set `bidirectional` to true to enable it.
+
 ## 1.3.6
 
 - Added a helper function `kill`.
