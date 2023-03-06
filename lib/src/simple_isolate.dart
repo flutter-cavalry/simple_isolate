@@ -121,25 +121,42 @@ class SimpleIsolate<R> {
   static Future<SimpleIsolate<T>> spawn<T>(
       Future<T> Function(SIContext ctx) entryPoint, dynamic argument,
       {void Function(SIMsg msg)? onMsgReceived,
-      void Function(dynamic argument)? onSpawn}) async {
+      void Function(dynamic argument)? onSpawn,
+      bool? debug}) async {
     var rp = ReceivePort();
     var completer = Completer<T>();
     SendPort? sp;
     var spCompleter = Completer<SendPort>();
     var isDone = false;
 
+    void log(String msg) {
+      if (debug ?? false) {
+        // ignore: avoid_print
+        print('[SimpleIsolate-out] $msg');
+      }
+    }
+
     rp.listen((dynamic dynRawMsg) {
-      if (dynRawMsg == null && !isDone) {
-        // Cancelled.
-        rp.close();
-        completer.completeError(
-            SimpleIsolateAbortException('The [Isolate] is cancelled'));
+      log('out-msg: $dynRawMsg');
+
+      if (dynRawMsg == null) {
+        if (!isDone) {
+          log('out-msg: cancelled');
+          // Cancelled.
+          rp.close();
+          completer.completeError(
+              SimpleIsolateAbortException('The [Isolate] is cancelled'));
+        } else {
+          // if `isDone` is true, we have closed `rp` and completed `completer`, do nothing.
+          log('out-msg: done (double checked)');
+        }
       } else {
         var rawMsg = dynRawMsg as List<dynamic>;
         var type = _MsgHead.values[rawMsg[0] as int];
         switch (type) {
           case _MsgHead.done:
             {
+              log('out-msg: msg.done');
               isDone = true;
               rp.close();
               completer.complete(rawMsg[1] as T);
@@ -148,6 +165,7 @@ class SimpleIsolate<R> {
 
           case _MsgHead.err:
             {
+              log('out-msg: msg.err');
               rp.close();
               completer.completeError(rawMsg[1] as Object,
                   StackTrace.fromString(rawMsg[2] as String));
@@ -156,6 +174,7 @@ class SimpleIsolate<R> {
 
           case _MsgHead.load:
             {
+              log('out-msg: msg.load');
               sp = rawMsg[1] as SendPort;
               spCompleter.complete(sp);
               break;
@@ -163,12 +182,14 @@ class SimpleIsolate<R> {
 
           case _MsgHead.userMsg:
             {
+              log('out-msg: msg.userMsg');
               onMsgReceived?.call(SIMsg.fromRawMsg(rawMsg[1]));
               break;
             }
 
           default:
             {
+              log('out-msg: msg.unknown');
               throw Exception('Unknown _MsgHead value $type');
             }
         }
@@ -181,7 +202,7 @@ class SimpleIsolate<R> {
     ];
 
     var iso = await Isolate.spawn(
-        _makeEntryFunc(entryPoint, onSpawn), entryRawParam,
+        _makeEntryFunc(entryPoint, onSpawn, debug ?? false), entryRawParam,
         onExit: rp.sendPort);
     return SimpleIsolate<T>._(iso, completer.future,
         _MsgHeadInIsolate.userMsg.index, spCompleter.future);
@@ -189,8 +210,16 @@ class SimpleIsolate<R> {
 
   static void Function(List<dynamic> rawMsg) _makeEntryFunc<T>(
       Future<T> Function(SIContext ctx) entryPoint,
-      void Function(dynamic argument)? onSpawn) {
+      void Function(dynamic argument)? onSpawn,
+      bool debug) {
     return (List<dynamic> rawMsg) async {
+      void log(String msg) {
+        if (debug) {
+          // ignore: avoid_print
+          print('[SimpleIsolate-in] $msg');
+        }
+      }
+
       var sp = rawMsg[0] as SendPort;
       // ignore: implicit_dynamic_variable
       var argument = rawMsg[1];
@@ -198,29 +227,38 @@ class SimpleIsolate<R> {
       onSpawn?.call(ctx.argument);
       var rp = ReceivePort();
       rp.listen((dynamic dynRawMsg) {
+        log('in-msg: $dynRawMsg');
         var rawMsg = dynRawMsg as List<dynamic>;
         var type = _MsgHeadInIsolate.values[rawMsg[0] as int];
         switch (type) {
           case _MsgHeadInIsolate.userMsg:
             {
+              log('in-msg: userMsg');
               ctx.onMsgReceivedInIsolate?.call(SIMsg.fromRawMsg(rawMsg[1]));
               break;
             }
 
           default:
             {
+              log('in-msg: unknown');
               throw Exception('Unknown _MsgHeadInIsolate value $type');
             }
         }
       });
 
       try {
+        log('body: sending msgHead.load');
         sp.send([_MsgHead.load.index, rp.sendPort]);
+        log('body: running');
         var result = await entryPoint(ctx);
+        log('body: sending msgHead.done');
         sp.send([_MsgHead.done.index, result]);
+        log('body: done');
       } catch (err, stacktrace) {
+        log('body: err $err, $stacktrace');
         sp.send([_MsgHead.err.index, err, stacktrace.toString()]);
       } finally {
+        log('body: rp.close');
         rp.close();
       }
     };
