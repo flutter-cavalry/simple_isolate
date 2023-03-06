@@ -80,34 +80,31 @@ Future<void> sendMessagesFromIsolate() async {
 }
 
 Future<void> sendMessagesToIsolate() async {
-  var si = await SimpleIsolate.spawn<String>(
-    (SIContext ctx) async {
-      var result = '';
-      ctx.onMsgReceivedInIsolate = (msg) {
-        switch (msg.name) {
-          case 'inject':
-            {
-              result += msg.params?['value'] as String;
-              break;
-            }
+  var si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
+    var result = '';
+    ctx.onMsgReceivedInIsolate = (msg) {
+      switch (msg.name) {
+        case 'inject':
+          {
+            result += msg.params?['value'] as String;
+            break;
+          }
 
-          default:
-            {
-              print(
-                  'Unsupported message ${msg.name}, something went wrong in your code.');
-              break;
-            }
-        }
-      };
-      var to = ctx.argument as int;
-      for (var i = 0; i < to; i++) {
-        result += '<data chunk $i>';
-        await Future<void>.delayed(Duration(milliseconds: 500));
+        default:
+          {
+            print(
+                'Unsupported message ${msg.name}, something went wrong in your code.');
+            break;
+          }
       }
-      return result;
-    },
-    3,
-  );
+    };
+    var to = ctx.argument as int;
+    for (var i = 0; i < to; i++) {
+      result += '<data chunk $i>';
+      await Future<void>.delayed(Duration(milliseconds: 500));
+    }
+    return result;
+  }, 3, bidirectional: true);
   await si
       .sendMsgToIsolate('inject', <String, dynamic>{'value': '<injected!!!>'});
   print(await si.future);

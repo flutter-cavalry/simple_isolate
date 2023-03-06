@@ -83,6 +83,7 @@ void main() {
         return res;
       },
       3,
+      bidirectional: true,
       onMsgReceived: (msg) => msgList.add(msg.toString()),
     );
 

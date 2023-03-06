@@ -132,6 +132,8 @@ Future<void> sendMessagesFromIsolate() async {
 
 ## Send messages into `Isolate`
 
+Call `SimpleIsolate.spawn` with `bidirectional: true` to enable bidirectional communication.
+
 To send message back into isolate, use `SimpleIsolate.sendMsgToIsolate`. And handle those messages with `SIContext.onMsgReceivedInIsolate`.
 
 **Note that the messages you sent to `Isolate` may not be handled if your entrypoint function exits too early. Message handling in isolate relies on the internal event loop created in the isolate. If it exits too early (or technically speaking, it exits without needing to wait for next event loop), the isolate exits too and never gets to handle the `onMsgReceivedInIsolate`. In the example below, we called `Future<void>.delayed` to make use of the event loop associated with the isolate. **

@@ -3,7 +3,7 @@ import 'dart:isolate';
 
 /// A wrapper around [SendPort] to send [SIMsg].
 class SISendPort {
-  /// [SISendPort] usually embeds message boy into another message identified with [headType].
+  /// [SISendPort] usually embeds message boy into another message identified by [headType].
   /// See [_MsgHead] enum for details.
   final int _headType;
 
@@ -91,7 +91,7 @@ class SimpleIsolate<R> {
   final Future<R> future;
 
   final int _sendPortMsgHead;
-  final Future<SendPort> _sendPortFuture;
+  final Future<SendPort?> _sendPortFuture;
   SISendPort? _sendPort;
 
   SimpleIsolate._(
@@ -104,7 +104,11 @@ class SimpleIsolate<R> {
   /// Sends a message to the internal isolate with the given [name] and [params].
   Future<void> sendMsgToIsolate(
       String name, Map<String, dynamic>? params) async {
-    _sendPort ??= SISendPort(await _sendPortFuture, _sendPortMsgHead);
+    var sp = await _sendPortFuture;
+    if (sp == null) {
+      throw Exception('`SendPort` is null. Make sure `bidirectional` is true.');
+    }
+    _sendPort ??= SISendPort(sp, _sendPortMsgHead);
     _sendPort!.sendMsg(name, params);
   }
 
@@ -127,7 +131,7 @@ class SimpleIsolate<R> {
     var rp = ReceivePort();
     var completer = Completer<T>();
     SendPort? sp;
-    var spCompleter = Completer<SendPort>();
+    var spCompleter = Completer<SendPort?>();
     var isDone = false;
 
     void log(String msg) {
@@ -198,7 +202,7 @@ class SimpleIsolate<R> {
         case _MsgHead.load:
           {
             log('out-msg: msg.load');
-            sp = rawList[1] as SendPort;
+            sp = rawList[1] as SendPort?;
             spCompleter.complete(sp);
             break;
           }
@@ -224,16 +228,23 @@ class SimpleIsolate<R> {
     ];
 
     var iso = await Isolate.spawn(
-        _makeEntryFunc(entryPoint, onSpawn, debug ?? false), entryRawParam,
-        onExit: rp.sendPort, onError: rp.sendPort);
+        _makeEntryFunc(
+            entryPoint: entryPoint,
+            onSpawn: onSpawn,
+            debug: debug ?? false,
+            bidirectional: bidirectional ?? false),
+        entryRawParam,
+        onExit: rp.sendPort,
+        onError: rp.sendPort);
     return SimpleIsolate<T>._(iso, completer.future,
         _MsgHeadInIsolate.userMsg.index, spCompleter.future);
   }
 
   static void Function(List<dynamic> rawMsg) _makeEntryFunc<T>(
-      Future<T> Function(SIContext ctx) entryPoint,
-      void Function(dynamic argument)? onSpawn,
-      bool debug) {
+      {required Future<T> Function(SIContext ctx) entryPoint,
+      required void Function(dynamic argument)? onSpawn,
+      required bool debug,
+      required bool bidirectional}) {
     return (List<dynamic> rawMsg) async {
       void log(String msg) {
         if (debug) {
@@ -247,30 +258,33 @@ class SimpleIsolate<R> {
       var argument = rawMsg[1];
       var ctx = SIContext(argument, SISendPort(sp, _MsgHead.userMsg.index));
       onSpawn?.call(ctx.argument);
-      var rp = ReceivePort();
-      rp.listen((dynamic dynRawMsg) {
-        log('in-msg: $dynRawMsg');
-        var rawMsg = dynRawMsg as List<dynamic>;
-        var type = _MsgHeadInIsolate.values[rawMsg[0] as int];
-        switch (type) {
-          case _MsgHeadInIsolate.userMsg:
-            {
-              log('in-msg: userMsg');
-              ctx.onMsgReceivedInIsolate?.call(SIMsg.fromRawMsg(rawMsg[1]));
-              break;
-            }
+      ReceivePort? rp;
+      if (bidirectional) {
+        rp = ReceivePort();
+        rp.listen((dynamic dynRawMsg) {
+          log('in-msg: $dynRawMsg');
+          var rawMsg = dynRawMsg as List<dynamic>;
+          var type = _MsgHeadInIsolate.values[rawMsg[0] as int];
+          switch (type) {
+            case _MsgHeadInIsolate.userMsg:
+              {
+                log('in-msg: userMsg');
+                ctx.onMsgReceivedInIsolate?.call(SIMsg.fromRawMsg(rawMsg[1]));
+                break;
+              }
 
-          default:
-            {
-              log('in-msg: unknown');
-              throw Exception('Unknown _MsgHeadInIsolate value $type');
-            }
-        }
-      });
+            default:
+              {
+                log('in-msg: unknown');
+                throw Exception('Unknown _MsgHeadInIsolate value $type');
+              }
+          }
+        });
+      }
 
       try {
         log('body: sending msgHead.load');
-        sp.send([_MsgHead.load.index, rp.sendPort]);
+        sp.send([_MsgHead.load.index, rp?.sendPort]);
         log('body: running');
         var result = await entryPoint(ctx);
         log('body: sending msgHead.done');
@@ -280,8 +294,8 @@ class SimpleIsolate<R> {
         log('body: err $err, $stacktrace');
         sp.send([_MsgHead.err.index, err, stacktrace.toString()]);
       } finally {
-        log('body: rp.close');
-        rp.close();
+        log('body: finally running');
+        rp?.close();
       }
     };
   }
