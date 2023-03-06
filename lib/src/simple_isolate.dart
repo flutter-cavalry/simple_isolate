@@ -227,17 +227,23 @@ class SimpleIsolate<R> {
       argument,
     ];
 
-    var iso = await Isolate.spawn(
-        _makeEntryFunc(
-            entryPoint: entryPoint,
-            onSpawn: onSpawn,
-            debug: debug ?? false,
-            bidirectional: bidirectional ?? false),
-        entryRawParam,
-        onExit: rp.sendPort,
-        onError: rp.sendPort);
-    return SimpleIsolate<T>._(iso, completer.future,
-        _MsgHeadInIsolate.userMsg.index, spCompleter.future);
+    try {
+      var iso = await Isolate.spawn(
+          _makeEntryFunc(
+              entryPoint: entryPoint,
+              onSpawn: onSpawn,
+              debug: debug ?? false,
+              bidirectional: bidirectional ?? false),
+          entryRawParam,
+          errorsAreFatal: true,
+          onExit: rp.sendPort,
+          onError: rp.sendPort);
+      return SimpleIsolate<T>._(iso, completer.future,
+          _MsgHeadInIsolate.userMsg.index, spCompleter.future);
+    } catch (err) {
+      rp.close();
+      rethrow;
+    }
   }
 
   static void Function(List<dynamic> rawMsg) _makeEntryFunc<T>(
@@ -258,10 +264,10 @@ class SimpleIsolate<R> {
       var argument = rawMsg[1];
       var ctx = SIContext(argument, SISendPort(sp, _MsgHead.userMsg.index));
       onSpawn?.call(ctx.argument);
-      ReceivePort? rp;
+      ReceivePort? bidirectionalRP;
       if (bidirectional) {
-        rp = ReceivePort();
-        rp.listen((dynamic dynRawMsg) {
+        bidirectionalRP = ReceivePort();
+        bidirectionalRP.listen((dynamic dynRawMsg) {
           log('in-msg: $dynRawMsg');
           var rawMsg = dynRawMsg as List<dynamic>;
           var type = _MsgHeadInIsolate.values[rawMsg[0] as int];
@@ -284,18 +290,18 @@ class SimpleIsolate<R> {
 
       try {
         log('body: sending msgHead.load');
-        sp.send([_MsgHead.load.index, rp?.sendPort]);
+        sp.send([_MsgHead.load.index, bidirectionalRP?.sendPort]);
         log('body: running');
         var result = await entryPoint(ctx);
         log('body: sending msgHead.done');
-        sp.send([_MsgHead.done.index, result]);
         log('body: done');
+        Isolate.exit(sp, [_MsgHead.done.index, result]);
       } catch (err, stacktrace) {
         log('body: err $err, $stacktrace');
         sp.send([_MsgHead.err.index, err, stacktrace.toString()]);
       } finally {
         log('body: finally running');
-        rp?.close();
+        bidirectionalRP?.close();
       }
     };
   }
