@@ -134,7 +134,7 @@ Future<void> kill() async {
       si.future,
       () async {
         await Future<void>.delayed(Duration(seconds: 1));
-        si.core.kill();
+        si.kill();
         return Future.value('');
       }(),
     ]);

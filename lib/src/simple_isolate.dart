@@ -85,7 +85,7 @@ class SimpleIsolateAbortException implements Exception {
 /// Wrapper type around Dart [Isolate].
 class SimpleIsolate<R> {
   /// Gets the internal [Isolate].
-  final Isolate core;
+  final Isolate? core;
 
   /// Gets the `Future<R>` of entrypoint function.
   final Future<R> future;
@@ -115,9 +115,9 @@ class SimpleIsolate<R> {
   /// Kills the internal [Isolate].
   void kill({bool? immediate}) {
     if (immediate == true) {
-      core.kill(priority: Isolate.immediate);
+      core?.kill(priority: Isolate.immediate);
     } else {
-      core.kill();
+      core?.kill();
     }
   }
 
@@ -127,7 +127,8 @@ class SimpleIsolate<R> {
       {void Function(SIMsg msg)? onMsgReceived,
       void Function(dynamic argument)? onSpawn,
       bool? debug,
-      bool? bidirectional}) async {
+      bool? bidirectional,
+      bool? synchronous}) async {
     var rp = ReceivePort();
     var completer = Completer<T>();
     SendPort? sp;
@@ -228,17 +229,21 @@ class SimpleIsolate<R> {
     ];
 
     try {
-      var iso = await Isolate.spawn(
-          _makeEntryFunc(
-              entryPoint: entryPoint,
-              onSpawn: onSpawn,
-              debug: debug ?? false,
-              bidirectional: bidirectional ?? false),
-          entryRawParam,
-          errorsAreFatal: true,
-          onExit: rp.sendPort,
-          onError: rp.sendPort);
-      return SimpleIsolate<T>._(iso, completer.future,
+      Isolate? isolate;
+      var entryFn = _makeEntryFunc(
+          entryPoint: entryPoint,
+          onSpawn: onSpawn,
+          debug: debug ?? false,
+          bidirectional: bidirectional ?? false,
+          synchronous: synchronous ?? false);
+      if (synchronous ?? false) {
+        entryFn(entryRawParam);
+      } else {
+        isolate = await Isolate.spawn(entryFn, entryRawParam,
+            errorsAreFatal: true, onExit: rp.sendPort, onError: rp.sendPort);
+      }
+
+      return SimpleIsolate<T>._(isolate, completer.future,
           _MsgHeadInIsolate.userMsg.index, spCompleter.future);
     } catch (err) {
       rp.close();
@@ -250,7 +255,8 @@ class SimpleIsolate<R> {
       {required Future<T> Function(SIContext ctx) entryPoint,
       required void Function(dynamic argument)? onSpawn,
       required bool debug,
-      required bool bidirectional}) {
+      required bool bidirectional,
+      required bool synchronous}) {
     return (List<dynamic> rawMsg) async {
       void log(String msg) {
         if (debug) {
@@ -295,7 +301,11 @@ class SimpleIsolate<R> {
         var result = await entryPoint(ctx);
         log('body: sending msgHead.done');
         log('body: done');
-        Isolate.exit(sp, [_MsgHead.done.index, result]);
+        if (synchronous) {
+          sp.send([_MsgHead.done.index, result]);
+        } else {
+          Isolate.exit(sp, [_MsgHead.done.index, result]);
+        }
       } catch (err, stacktrace) {
         log('body: err $err, $stacktrace');
         sp.send([_MsgHead.err.index, err, stacktrace.toString()]);
