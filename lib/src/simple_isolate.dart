@@ -122,7 +122,8 @@ class SimpleIsolate<R> {
       Future<T> Function(SIContext ctx) entryPoint, dynamic argument,
       {void Function(SIMsg msg)? onMsgReceived,
       void Function(dynamic argument)? onSpawn,
-      bool? debug}) async {
+      bool? debug,
+      bool? bidirectional}) async {
     var rp = ReceivePort();
     var completer = Completer<T>();
     SendPort? sp;
@@ -139,6 +140,7 @@ class SimpleIsolate<R> {
     rp.listen((dynamic dynRawMsg) {
       log('out-msg: $dynRawMsg');
 
+      // Handle dart `onExit`.
       if (dynRawMsg == null) {
         if (!isDone) {
           log('out-msg: cancelled');
@@ -150,49 +152,69 @@ class SimpleIsolate<R> {
           // if `isDone` is true, we have closed `rp` and completed `completer`, do nothing.
           log('out-msg: done (double checked)');
         }
-      } else {
-        var rawMsg = dynRawMsg as List<dynamic>;
-        var type = _MsgHead.values[rawMsg[0] as int];
-        switch (type) {
-          case _MsgHead.done:
-            {
-              log('out-msg: msg.done');
-              isDone = true;
-              rp.close();
-              completer.complete(rawMsg[1] as T);
-              break;
-            }
+        return;
+      }
 
-          case _MsgHead.err:
-            {
-              log('out-msg: msg.err');
-              rp.close();
-              completer.completeError(rawMsg[1] as Object,
-                  StackTrace.fromString(rawMsg[2] as String));
-              break;
-            }
+      if (dynRawMsg is List == false) {
+        log('out-msg: msg not a list');
+        rp.close();
+        completer.completeError(
+            Exception('dynRawMsg is not a list. Got $dynRawMsg'));
+        return;
+      }
 
-          case _MsgHead.load:
-            {
-              log('out-msg: msg.load');
-              sp = rawMsg[1] as SendPort;
-              spCompleter.complete(sp);
-              break;
-            }
+      var rawList = dynRawMsg as List<dynamic>;
 
-          case _MsgHead.userMsg:
-            {
-              log('out-msg: msg.userMsg');
-              onMsgReceived?.call(SIMsg.fromRawMsg(rawMsg[1]));
-              break;
-            }
+      // Handle dart `onError` messages.
+      if (rawList[0] is String) {
+        log('out-msg: onError');
+        rp.close();
+        completer.completeError(
+            rawList[0] as String, StackTrace.fromString(rawList[1] as String));
+        return;
+      }
 
-          default:
-            {
-              log('out-msg: msg.unknown');
-              throw Exception('Unknown _MsgHead value $type');
-            }
-        }
+      // Handle our messages.
+      var type = _MsgHead.values[rawList[0] as int];
+      switch (type) {
+        case _MsgHead.done:
+          {
+            log('out-msg: msg.done');
+            isDone = true;
+            rp.close();
+            completer.complete(rawList[1] as T);
+            break;
+          }
+
+        case _MsgHead.err:
+          {
+            log('out-msg: msg.err');
+            rp.close();
+            completer.completeError(rawList[1] as Object,
+                StackTrace.fromString(rawList[2] as String));
+            break;
+          }
+
+        case _MsgHead.load:
+          {
+            log('out-msg: msg.load');
+            sp = rawList[1] as SendPort;
+            spCompleter.complete(sp);
+            break;
+          }
+
+        case _MsgHead.userMsg:
+          {
+            log('out-msg: msg.userMsg');
+            onMsgReceived?.call(SIMsg.fromRawMsg(rawList[1]));
+            break;
+          }
+
+        default:
+          {
+            log('out-msg: msg.unknown');
+            throw Exception('Unknown _MsgHead value $type');
+          }
       }
     });
 
@@ -203,7 +225,7 @@ class SimpleIsolate<R> {
 
     var iso = await Isolate.spawn(
         _makeEntryFunc(entryPoint, onSpawn, debug ?? false), entryRawParam,
-        onExit: rp.sendPort);
+        onExit: rp.sendPort, onError: rp.sendPort);
     return SimpleIsolate<T>._(iso, completer.future,
         _MsgHeadInIsolate.userMsg.index, spCompleter.future);
   }
