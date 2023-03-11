@@ -1,3 +1,5 @@
+# simple_isolate
+
 [![pub package](https://img.shields.io/pub/v/simple_isolate.svg)](https://pub.dev/packages/simple_isolate)
 [![Build Status](https://github.com/flutter-cavalry/simple_isolate/workflows/Build/badge.svg)](https://github.com/flutter-cavalry/simple_isolate/actions)
 
@@ -5,7 +7,7 @@ Simplified Dart isolates.
 
 ## Features
 
-- A `Future` based API that support returning data, completion, and handling exceptions
+- A `Future` based API that supports returning data, completion, and handling exceptions
 - Opt-in Bi-directional communication support between `Isolate` and the outer world
 
 ## Usage
