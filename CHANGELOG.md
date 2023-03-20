@@ -1,3 +1,7 @@
+## 1.4.2
+
+- Close `bidirectionalRP` before `Isolate.exit`.
+
 ## 1.4.0
 
 - Bidirectional communication is off by default, set `bidirectional` to true to enable it.
