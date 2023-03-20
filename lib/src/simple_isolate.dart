@@ -294,6 +294,11 @@ class SimpleIsolate<R> {
         });
       }
 
+      void finallyBlock() {
+        log('body: finally running');
+        bidirectionalRP?.close();
+      }
+
       try {
         log('body: sending msgHead.load');
         sp.send([_MsgHead.load.index, bidirectionalRP?.sendPort]);
@@ -301,6 +306,7 @@ class SimpleIsolate<R> {
         var result = await entryPoint(ctx);
         log('body: sending msgHead.done');
         log('body: done');
+        finallyBlock();
         if (synchronous) {
           sp.send([_MsgHead.done.index, result]);
         } else {
@@ -309,9 +315,7 @@ class SimpleIsolate<R> {
       } catch (err, stacktrace) {
         log('body: err $err, $stacktrace');
         sp.send([_MsgHead.err.index, err, stacktrace.toString()]);
-      } finally {
-        log('body: finally running');
-        bidirectionalRP?.close();
+        finallyBlock();
       }
     };
   }
