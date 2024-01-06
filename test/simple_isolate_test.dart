@@ -2,8 +2,8 @@ import 'package:simple_isolate/simple_isolate.dart';
 import 'package:test/test.dart';
 
 Future<void> testFutureAndCompletion(bool sync) async {
-  var si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
-    var to = ctx.argument as int;
+  final si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
+    final to = ctx.argument as int;
     for (var i = 1; i <= to; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
     }
@@ -13,8 +13,8 @@ Future<void> testFutureAndCompletion(bool sync) async {
 }
 
 Future<void> testException(bool sync) async {
-  var si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
-    var to = ctx.argument as int;
+  final si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
+    final to = ctx.argument as int;
     for (var i = 1; i <= to; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
     }
@@ -24,8 +24,8 @@ Future<void> testException(bool sync) async {
 }
 
 Future<void> testStacktrace(bool sync) async {
-  var si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
-    var to = ctx.argument as int;
+  final si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
+    final to = ctx.argument as int;
     for (var i = 1; i <= to; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
     }
@@ -41,10 +41,10 @@ Future<void> testStacktrace(bool sync) async {
 }
 
 Future<void> testMessageHandlers(bool sync) async {
-  List<String> msgList = [];
-  var si = await SimpleIsolate.spawn<String>(
+  final List<String> msgList = [];
+  final si = await SimpleIsolate.spawn<String>(
     (SIContext ctx) async {
-      var to = ctx.argument as int;
+      final to = ctx.argument as int;
       ctx.sendMsg('greeting', <String, dynamic>{'msg': 'hello'});
       for (var i = 1; i <= to; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 500));
@@ -68,8 +68,8 @@ Future<void> testMessageHandlers(bool sync) async {
 }
 
 Future<void> testBidirMessageHandlers(bool sync) async {
-  List<String> msgList = [];
-  var si = await SimpleIsolate.spawn<String>(
+  final List<String> msgList = [];
+  final si = await SimpleIsolate.spawn<String>(
     (SIContext ctx) async {
       var res = '';
       ctx.onMsgReceivedInIsolate = (msg) {
@@ -95,28 +95,30 @@ Future<void> testBidirMessageHandlers(bool sync) async {
 }
 
 void main() {
-  test('Future and completion', () => testFutureAndCompletion(false));
-  test('Future and completion (sync)', () => testFutureAndCompletion(true));
+  test('Future and completion', () async => testFutureAndCompletion(false));
+  test('Future and completion (sync)',
+      () async => testFutureAndCompletion(true));
 
-  test('Exception', () => testException(false));
-  test('Exception (sync)', () => testException(true));
+  test('Exception', () async => testException(false));
+  test('Exception (sync)', () async => testException(true));
 
-  test('Stacktrace', () => testStacktrace(false));
+  test('Stacktrace', () async => testStacktrace(false));
 
-  test('Stacktrace (sync)', () => testStacktrace(true));
+  test('Stacktrace (sync)', () async => testStacktrace(true));
 
-  test('Message handlers', () => testMessageHandlers(false));
+  test('Message handlers', () async => testMessageHandlers(false));
 
-  test('Message handlers (sync)', () => testMessageHandlers(true));
+  test('Message handlers (sync)', () async => testMessageHandlers(true));
 
-  test('Bidirectional Message handlers', () => testBidirMessageHandlers(false));
+  test('Bidirectional Message handlers',
+      () async => testBidirMessageHandlers(false));
 
   test('Bidirectional Message handlers (sync)',
-      () => testBidirMessageHandlers(true));
+      () async => testBidirMessageHandlers(true));
 
   test('Kill', () async {
-    var si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
-      var to = ctx.argument as int;
+    final si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
+      final to = ctx.argument as int;
       for (var i = 1; i <= to; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 500));
       }

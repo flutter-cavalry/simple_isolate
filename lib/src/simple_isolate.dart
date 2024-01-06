@@ -28,15 +28,15 @@ class SIMsg {
   SIMsg(this.name, this.params);
 
   static SIMsg fromRawMsg(dynamic dynRawMsg) {
-    var rawMsg = dynRawMsg as List<dynamic>;
-    var msgName = rawMsg[0] as String;
-    var params = rawMsg[1] as Map<String, dynamic>?;
+    final rawMsg = dynRawMsg as List<dynamic>;
+    final msgName = rawMsg[0] as String;
+    final params = rawMsg[1] as Map<String, dynamic>?;
     return SIMsg(msgName, params);
   }
 
   @override
   String toString() {
-    var paramStr = params != null ? params.toString() : '<null>';
+    final paramStr = params != null ? params.toString() : '<null>';
     return '$name -> $paramStr';
   }
 }
@@ -104,7 +104,7 @@ class SimpleIsolate<R> {
   /// Sends a message to the internal isolate with the given [name] and [params].
   Future<void> sendMsgToIsolate(
       String name, Map<String, dynamic>? params) async {
-    var sp = await _sendPortFuture;
+    final sp = await _sendPortFuture;
     if (sp == null) {
       throw Exception('`SendPort` is null. Make sure `bidirectional` is true.');
     }
@@ -129,10 +129,10 @@ class SimpleIsolate<R> {
       bool? debug,
       bool? bidirectional,
       bool? synchronous}) async {
-    var rp = ReceivePort();
-    var completer = Completer<T>();
+    final rp = ReceivePort();
+    final completer = Completer<T>();
     SendPort? sp;
-    var spCompleter = Completer<SendPort?>();
+    final spCompleter = Completer<SendPort?>();
     var isDone = false;
 
     void log(String msg) {
@@ -168,7 +168,7 @@ class SimpleIsolate<R> {
         return;
       }
 
-      var rawList = dynRawMsg as List<dynamic>;
+      final rawList = dynRawMsg as List<dynamic>;
 
       // Handle dart `onError` messages.
       if (rawList[0] is String) {
@@ -180,7 +180,7 @@ class SimpleIsolate<R> {
       }
 
       // Handle our messages.
-      var type = _MsgHead.values[rawList[0] as int];
+      final type = _MsgHead.values[rawList[0] as int];
       switch (type) {
         case _MsgHead.done:
           {
@@ -223,14 +223,14 @@ class SimpleIsolate<R> {
       }
     });
 
-    List<dynamic> entryRawParam = <dynamic>[
+    final List<dynamic> entryRawParam = <dynamic>[
       rp.sendPort,
       argument,
     ];
 
     try {
       Isolate? isolate;
-      var entryFn = _makeEntryFunc(
+      final entryFn = _makeEntryFunc(
           entryPoint: entryPoint,
           onSpawn: onSpawn,
           debug: debug ?? false,
@@ -265,18 +265,18 @@ class SimpleIsolate<R> {
         }
       }
 
-      var sp = rawMsg[0] as SendPort;
+      final sp = rawMsg[0] as SendPort;
       // ignore: implicit_dynamic_variable
-      var argument = rawMsg[1];
-      var ctx = SIContext(argument, SISendPort(sp, _MsgHead.userMsg.index));
+      final argument = rawMsg[1];
+      final ctx = SIContext(argument, SISendPort(sp, _MsgHead.userMsg.index));
       onSpawn?.call(ctx.argument);
       ReceivePort? bidirectionalRP;
       if (bidirectional) {
         bidirectionalRP = ReceivePort();
         bidirectionalRP.listen((dynamic dynRawMsg) {
           log('in-msg: $dynRawMsg');
-          var rawMsg = dynRawMsg as List<dynamic>;
-          var type = _MsgHeadInIsolate.values[rawMsg[0] as int];
+          final rawMsg = dynRawMsg as List<dynamic>;
+          final type = _MsgHeadInIsolate.values[rawMsg[0] as int];
           switch (type) {
             case _MsgHeadInIsolate.userMsg:
               {
@@ -303,7 +303,7 @@ class SimpleIsolate<R> {
         log('body: sending msgHead.load');
         sp.send([_MsgHead.load.index, bidirectionalRP?.sendPort]);
         log('body: running');
-        var result = await entryPoint(ctx);
+        final result = await entryPoint(ctx);
         log('body: sending msgHead.done');
         log('body: done');
         finallyBlock();

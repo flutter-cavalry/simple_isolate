@@ -1,11 +1,11 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print, use_string_buffers
 
 import 'package:simple_isolate/simple_isolate.dart';
 
 Future<void> futureCompletion() async {
-  var si = await SimpleIsolate.spawn<String>(
+  final si = await SimpleIsolate.spawn<String>(
     (SIContext ctx) async {
-      var count = ctx.argument as int;
+      final count = ctx.argument as int;
       var result = '';
       for (var i = 0; i < count; i++) {
         result += '<data chunk $i>';
@@ -22,7 +22,7 @@ Future<void> futureCompletion() async {
 }
 
 Future<void> futureException() async {
-  var si = await SimpleIsolate.spawn<String>(
+  final si = await SimpleIsolate.spawn<String>(
     (SIContext ctx) async {
       await Future<void>.delayed(Duration(milliseconds: 500));
       throw Exception('Oops!');
@@ -40,10 +40,10 @@ Future<void> futureException() async {
 }
 
 Future<void> sendMessagesFromIsolate() async {
-  var si = await SimpleIsolate.spawn<String>(
+  final si = await SimpleIsolate.spawn<String>(
     (SIContext ctx) async {
       var result = '';
-      var to = ctx.argument as int;
+      final to = ctx.argument as int;
       for (var i = 0; i < to; i++) {
         result += '<data chunk $i>';
         ctx.sendMsg(
@@ -80,7 +80,7 @@ Future<void> sendMessagesFromIsolate() async {
 }
 
 Future<void> sendMessagesToIsolate() async {
-  var si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
+  final si = await SimpleIsolate.spawn<String>((SIContext ctx) async {
     var result = '';
     ctx.onMsgReceivedInIsolate = (msg) {
       switch (msg.name) {
@@ -98,7 +98,7 @@ Future<void> sendMessagesToIsolate() async {
           }
       }
     };
-    var to = ctx.argument as int;
+    final to = ctx.argument as int;
     for (var i = 0; i < to; i++) {
       result += '<data chunk $i>';
       await Future<void>.delayed(Duration(milliseconds: 500));
@@ -114,12 +114,12 @@ Future<void> sendMessagesToIsolate() async {
 }
 
 Future<void> kill() async {
-  var si = await SimpleIsolate.spawn<String>(
+  final si = await SimpleIsolate.spawn<String>(
     (SIContext ctx) async {
-      var count = ctx.argument as int;
+      final count = ctx.argument as int;
       var result = '';
       for (var i = 0; i < count; i++) {
-        var data = '<data chunk $i>';
+        final data = '<data chunk $i>';
         print('--> Appending data $data');
         result += data;
         await Future<void>.delayed(Duration(milliseconds: 500));
@@ -144,9 +144,9 @@ Future<void> kill() async {
 }
 
 Future<void> onSpawn() async {
-  var si = await SimpleIsolate.spawn<String>(
+  final si = await SimpleIsolate.spawn<String>(
     (SIContext ctx) async {
-      var count = ctx.argument as int;
+      final count = ctx.argument as int;
       var result = '';
       for (var i = 0; i < count; i++) {
         result += '<data chunk $i>';
