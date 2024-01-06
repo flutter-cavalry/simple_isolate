@@ -1,10 +1,10 @@
 name: simple_isolate
 description: Simplified Dart isolates.
-version: 1.4.2
+version: 1.5.0
 homepage: https://github.com/flutter-cavalry/simple_isolate
 
 environment:
-  sdk: ">=2.13.0 <3.0.0"
+  sdk: ">=2.13.0 <4.0.0"
 
 dev_dependencies:
   mgenware_dart_lints: ^5.0.0
