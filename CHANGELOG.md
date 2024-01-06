@@ -1,3 +1,7 @@
+## 1.5.0
+
+- Add `debugName` to `spawn`.
+
 ## 1.4.2
 
 - Close `bidirectionalRP` before `Isolate.exit`.

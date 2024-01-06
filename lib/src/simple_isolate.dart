@@ -128,6 +128,7 @@ class SimpleIsolate<R> {
       void Function(dynamic argument)? onSpawn,
       bool? debug,
       bool? bidirectional,
+      String? debugName,
       bool? synchronous}) async {
     final rp = ReceivePort();
     final completer = Completer<T>();
@@ -240,7 +241,10 @@ class SimpleIsolate<R> {
         entryFn(entryRawParam);
       } else {
         isolate = await Isolate.spawn(entryFn, entryRawParam,
-            errorsAreFatal: true, onExit: rp.sendPort, onError: rp.sendPort);
+            errorsAreFatal: true,
+            onExit: rp.sendPort,
+            onError: rp.sendPort,
+            debugName: debugName);
       }
 
       return SimpleIsolate<T>._(isolate, completer.future,

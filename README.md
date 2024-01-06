@@ -22,11 +22,11 @@ import 'package:simple_isolate/simple_isolate.dart';
 
 Instead of `Isolate.spawn`, use `SimpleIsolate.spawn<T>(entrypoint, argument)` to run a function of type `Future<T> Function(SIContext ctx)` as an isolate entrypoint.
 
-- The context type `SIContext` can be used in many cases, which we will cover in examples below
-- `SIContext.argument`: gets the argument passed to the entrypoint function
-- Note the entrypoint function returns a `Future<T>`, you can return data back to the calling function as long as the data is serializable between isolates
+- The context type `SIContext` can be used in many cases, which we will cover in examples below.
+- `SIContext.argument`: gets the argument passed to the entrypoint function.
+- Note the entrypoint function returns a `Future<T>`, you can return data back to the calling function as long as the data is serializable between isolates.
 - `SimpleIsolate.spawn`: wrapper around `Isolate.spawn`, returns a `Future<SimpleIsolate<T>>`.
-- `SimpleIsolate.future`: use this to wait for completion or handle exceptions from entrypoint function
+- `SimpleIsolate.future`: use this to wait for completion or handle exceptions from entrypoint function.
 - `SimpleIsolate.core`: returns the internal dart [Isolate]
 
 For example, return some data:
