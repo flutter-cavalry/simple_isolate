@@ -241,10 +241,7 @@ class SimpleIsolate<R> {
         entryFn(entryRawParam);
       } else {
         isolate = await Isolate.spawn(entryFn, entryRawParam,
-            errorsAreFatal: true,
-            onExit: rp.sendPort,
-            onError: rp.sendPort,
-            debugName: debugName);
+            onExit: rp.sendPort, onError: rp.sendPort, debugName: debugName);
       }
 
       return SimpleIsolate<T>._(isolate, completer.future,
